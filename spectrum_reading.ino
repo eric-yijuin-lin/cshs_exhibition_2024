@@ -14,10 +14,10 @@ struct SpectrumReadings {
   float temp;
 };
 
-// const char* ssid = "iPhone-YJL"; //輸入wifi ssid
-const char* ssid = ""; //輸入wifi ssid
-const char* password = ""; 
-const char* serverUrl = "";
+const int delayMillis = 5000; // 設定每次傳送資料到 Google 試算表後要休息多少毫秒 (請勿設定小於 1000)
+const char* ssid = "iPhone-YJL"; //輸入wifi ssid
+const char* password = "12345678"; //輸入wifi 密碼WiFi.begin(ssid, password);
+const char* serverUrl = "https://goattl.tw/cshs/hackathon/spectrum";
 AS726X sensor;//Creates the sensor object
 byte GAIN = 3; // 0: 1x 1: 3.7x 2: 16x 3: 64x (power-on default)
 byte MEASUREMENT_MODE = 0;  // 0: Continuous reading of VBGY (Visible) / STUV (IR)
@@ -51,7 +51,7 @@ void sendSpectrumReading(SpectrumReadings sr, const char* host = serverUrl) {
     Serial.printf("[HTTPS] Unable to connect\n");
   }
   Serial.println();
-  delay(10000);
+  delay(delayMillis);
 }
 
 void setup() {
@@ -67,7 +67,6 @@ void loop() {
   Serial.println(millis()/1000);
   SpectrumReadings sr = getSpectrumReading();
   sendSpectrumReading(sr);
-  delay(1000);
 }
 
 void connectWifi() {
@@ -80,6 +79,7 @@ void connectWifi() {
     Serial.print(".");
   }
 
+  delay(1000);
   Serial.println("");
   Serial.println("WiFi connected.");
   Serial.print("STAIP address: ");
@@ -112,6 +112,7 @@ SpectrumReadings getSpectrumReading() {
     sr.r = sensor.getCalibratedRed();
     sr.temp = sensor.getTemperatureF();
   }
+  sr.ts = millis() / 1000;
   return sr;
 }
 
