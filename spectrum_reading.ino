@@ -15,8 +15,8 @@ struct SpectrumReadings {
 };
 
 const int delayMillis = 5000; // 設定每次傳送資料到 Google 試算表後要休息多少毫秒 (請勿設定小於 1000)
-const char* ssid = "iPhone-YJL"; //輸入wifi ssid
-const char* password = "12345678"; //輸入wifi 密碼WiFi.begin(ssid, password);
+const char* ssid = "CSHS_T36_AP_2G"; //輸入wifi ssid
+const char* password = "51685168"; //輸入wifi 密碼WiFi.begin(ssid, password);
 const char* serverUrl = "https://goattl.tw/cshs/hackathon/spectrum";
 AS726X sensor;//Creates the sensor object
 byte GAIN = 3; // 0: 1x 1: 3.7x 2: 16x 3: 64x (power-on default)
@@ -25,11 +25,15 @@ byte MEASUREMENT_MODE = 0;  // 0: Continuous reading of VBGY (Visible) / STUV (I
                             // 2: Continuous reading of all channels
                             // 3: One-shot reading of all channels (power-on default)
 
-void sendSpectrumReading(SpectrumReadings sr, const char* host = serverUrl) {
+int bufferIndex = 0;
+int bufferSize = 10;
+SpectrumReadings* spectrumBuffer;
+
+void sendSpectrumReading(const char* host = serverUrl) {
   WiFiClientSecure *client = new WiFiClientSecure;
   if(client) {
     client->setInsecure();
-    String query = getQueryString(sr, host);
+    String query = getQueryString(host);
     HTTPClient https;
     Serial.println("[GET] " + query);
     if (https.begin(*client, query)) {
@@ -51,7 +55,6 @@ void sendSpectrumReading(SpectrumReadings sr, const char* host = serverUrl) {
     Serial.printf("[HTTPS] Unable to connect\n");
   }
   Serial.println();
-  delay(delayMillis);
 }
 
 void setup() {
@@ -59,14 +62,21 @@ void setup() {
   connectWifi();
   Wire.begin();
   sensor.begin(Wire, GAIN, MEASUREMENT_MODE);//Initializes the sensor with non default values
+  spectrumBuffer = new SpectrumReadings[bufferSize];
 }
 
 void loop() {
   Serial.print("reading spectrum: ");
   Serial.print("timestamp=");
   Serial.println(millis()/1000);
+
   SpectrumReadings sr = getSpectrumReading();
-  sendSpectrumReading(sr);
+  updateBuffer(sr);
+  if (bufferIndex == bufferSize) {
+    sendSpectrumReading();
+    bufferIndex = 0;
+  }
+  delay(delayMillis);
 }
 
 void connectWifi() {
@@ -96,7 +106,7 @@ void testSpectrumReading() {
   test.o = 5.0;
   test.r = 6.0;
   test.temp = 777.0;
-  sendSpectrumReading(test, "127.0.0.1:9002/spectrum");
+  // sendSpectrumReading(test, "127.0.0.1:9002/spectrum");
 }
 
 SpectrumReadings getSpectrumReading() {
@@ -116,16 +126,28 @@ SpectrumReadings getSpectrumReading() {
   return sr;
 }
 
+void updateBuffer(SpectrumReadings sr) {
+  spectrumBuffer[bufferIndex] = sr;
+  bufferIndex++;
+}
 
-String getQueryString(SpectrumReadings sr, const char* host) {
+
+String getQueryString(const char* host) {
   // sprintf 不支援浮點數，暫時棄用
-  String query = String(host) 
-    + "?ts=" + String(sr.ts)
-    + "&v=" + String(sr.v)
-    + "&b=" + String(sr.b)
-    + "&g=" + String(sr.g)
-    + "&y=" + String(sr.y)
-    + "&o=" + String(sr.o)
-    + "&r=" + String(sr.r);
+  String dataString = "";
+  for (int i=0; i<bufferSize; i++) {
+    SpectrumReadings sr = spectrumBuffer[i];
+    dataString = dataString + String(sr.ts)
+    + "," + String(sr.v)
+    + "," + String(sr.b)
+    + "," + String(sr.g)
+    + "," + String(sr.y)
+    + "," + String(sr.o)
+    + "," + String(sr.r)
+    + ";";
+  }
+
+  String query = String(host) + "?s=" + dataString;
   return query;
 }
+
