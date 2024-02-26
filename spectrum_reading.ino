@@ -68,9 +68,10 @@ void setup() {
 void loop() {
   Serial.print("reading spectrum: ");
   Serial.print("timestamp=");
-  Serial.println(millis()/1000);
+  Serial.print(millis()/1000);
 
   SpectrumReadings sr = getSpectrumReading();
+  showSpectrumReading(sr);
   updateBuffer(sr);
   if (bufferIndex == bufferSize) {
     sendSpectrumReading();
@@ -97,15 +98,13 @@ void connectWifi() {
 }
 
 
-void testSpectrumReading() {
-  SpectrumReadings test;
-  test.v = 1.0;
-  test.b = 2.0;
-  test.g = 3.0;
-  test.y = 4.0;
-  test.o = 5.0;
-  test.r = 6.0;
-  test.temp = 777.0;
+void showSpectrumReading(SpectrumReadings sr) {
+  Serial.print("  violet="); Serial.print(sr.v);
+  Serial.print("  blue="); Serial.print(sr.b);
+  Serial.print("  green="); Serial.print(sr.g);
+  Serial.print("  yellow="); Serial.print(sr.y);
+  Serial.print("  orange="); Serial.print(sr.o);
+  Serial.print("  red="); Serial.println(sr.r);
   // sendSpectrumReading(test, "127.0.0.1:9002/spectrum");
 }
 
